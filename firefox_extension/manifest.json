@@ -1,0 +1,44 @@
+{
+ "manifest_version": 2,
+ "name": "Youtube Video Title Get",
+ "description": "try to take over the world!",
+ "version": "0.1",
+ "permissions": [
+    "<all_urls>",
+    "activeTab",
+    "cookies",
+    "contextMenus",
+    "contextualIdentities",
+    "history",
+    "idle",
+    "management",
+    "storage",
+    "tabs",
+    "webRequestBlocking",
+    "webRequest"
+  ],
+ "applications": {
+  "gecko": {
+   "id": "radio_youtube@tampermonkey.net"
+  }
+ },
+ "background": {
+     "scripts": [
+         "background.js"
+     ]
+ },
+ "content_scripts": [
+  {
+   "js": [
+       "utils.js",
+       "Youtube_Video_Title_Get.js"
+   ],
+   "run_at": "document_end",
+   "matches": [
+    "https://www.youtube.com/watch?v=*"
+   ],
+   "all_frames": true,
+   "match_about_blank": true
+  }
+ ]
+}

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+<head>
+<title></title>
+  <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" />
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+  <style type="text/css">
+
+  #radio_area {
+    margin: 20px;
+  }
+
+  .grid-container {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0px 0px;
+  grid-template-areas:
+    ". ."
+    ". .";
+}
+
+.play_preview_button {
+  background-color: transparent;
+}
+
+
+.main_song {
+  border-width: 2px;
+  border-color: #2F195F;
+  border-style: solid;
+  max-width: 500px;
+  padding: 10px;
+  border-radius: 15px;
+  position: relative;
+}
+
+.textDisplay {
+  /* max-width: 250px; */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-left: 25px;
+  width: 100%
+}
+
+.via {
+  position: absolute;
+  right: 0;
+  margin-right: 10px;
+}
+
+.progress_bar {
+  border-width: 3px;
+  border-bottom-style: solid;
+  border-color: gray;
+
+  border-radius: 15px;
+  margin-top: 10px;
+}
+
+.progress_ball {
+  width: 10px;
+  height: 10px;
+  background: slategray;
+  border-radius: 50%;
+  display: block;
+  position: absolute;
+}
+
+.artistLabel {
+  font-size: 1.4em;
+  color: white;
+  margin-right: 5px;
+}
+
+.albumLabel {
+  font-size: 1.1em;
+  color: white;
+}
+
+.scroll_text {
+  display: inline-block;
+  white-space: nowrap;
+  animation: floatText 15s infinite linear;
+  padding-left: 100%; /*Initial offset*/
+}
+@keyframes floatText {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+html {
+  background-color: #0F1020;
+}
+
+body {
+  background-color: #0F1020;
+}
+
+.color_main {
+  color: #0F1020;
+}
+.color_main_bg {
+  background-color: #0F1020;
+}
+
+.color_text {
+  color: white;
+}
+.color_text_bg {
+  background-color: white;
+}
+
+.color_highlight {
+  color: #7353BA;
+}
+.color_highlight_bg {
+  background-color: #7353BA;
+}
+
+.color_highlight2 {
+  color: #2F195F;
+}
+.color_highlight2_bg {
+  background-color: #2F195F;
+}
+
+.color_highlight3 {
+  color: #FAA6FF;
+}
+.color_highlight3_bg {
+  background-color: #FAA6FF;
+}
+
+.hidden {
+  display: none;
+}
+
+.history_item {
+  color: white;
+  width: 400px;
+  padding: 10px;
+  border-width: 3px;
+  border-radius: 15px;
+  border-color: #2F195F;
+  border-style: solid;
+  margin: 8px;
+}
+
+.history_data {
+  display: flex;
+}
+.history_meta {
+  font-size: 0.8em;
+}
+
+.history_song_info {
+  margin-left: 10px;
+}
+
+.history_song_source_icon {
+  float: right;
+}
+
+.history_song_name {
+  font-size: 1.1em;
+}
+
+.history_song_artist {
+  font-size: 0.9em;
+}
+
+.history_preview_button {
+  background-color: transparent;
+  margin-right: 10px;
+
+}
+
+.preview_area {
+  position: fixed;
+  bottom: 0;
+  height: 100px;
+  background-color: #2F195F;
+  right: 0;
+  left: 0;
+  border-width: 4px 0 0 0;
+  border-style: solid;
+  border-color: #7353BA;
+  padding: 4px;
+}
+
+.preview_button_close {
+  background-color: transparent;
+}
+
+.preview_meta {
+  display: flex;
+  float: right;
+}
+
+
+.radio_nav {
+  background-color: #2F195F;
+  border-width: 0 0 2px 0;
+  border-style: solid;
+  border-color: #7353BA;
+}
+
+
+
+</style>
+</head>
+<body style="height: 100%;">
+<nav class="navbar navbar-default navbar-static-top navbar-inverse radio_nav">
+  <img src="/static/logo_web.svg" height="50" width="150">
+</nav>
+
+{% block content %}{% endblock %}
+
+<footer style="color: white;">
+  See this project on <a href="https://github.com/0xnf/radionf">GitHub</a>
+</footer>
+
+</body>
+</html>

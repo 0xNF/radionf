@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+
+{% set cursong = current_song.song if current_song else none %}
+{% set noSong = cursong is none %}
+
+{% block content %}
+
+<main style="color: black;" id="radio_area">
+    <span id="nf_radio_active" class=" {{ 'hidden' if noSong }}">
+        <h1 class="color_text">Currently Listening to: </h1>
+        <div class="main_song color_text" style="display: flex;">
+
+            <!-- Icon for which service song is from -->
+            <span class="via" class="{{'hidden' if noSong or cursong.item.main_link is not none }}">
+                <button id="main_song_preview" class="play_preview_button" onclick="openPreview(currentSong)">
+                    preview
+                </button>
+                <a id="main_song_source_link" href="{{ current_song.song.item.main_link if not noSong }}">
+                    {% if current_song and current_song.song.item.href is not none %}
+                        <img id="main_song_source_icon" src="/static/Spotify_Icon_RGB_Green.png" height="15" width="15"/>
+                    {% else %}
+                        <img id="main_song_source_icon" src="/static/yt_logo_rgb_dark.png" height="15" width="60"/>
+                    {% endif %}
+                </a>
+            </span>
+
+            <!-- album cover art -->
+            <img id="main_song_image" style="grid-column: 1; grid-row-start: 1; grid-row-end: 2;" src="{{current_song.song.item.main_image if not noSong else ''}}" height="150" width="150"/>
+            
+            <!-- main content display -->
+            <span id="main_song" class="textDisplay">
+
+                <!-- Song title -->
+                <div>
+                    <h2 id="main_song_title" class="scroll_text" style="grid-column: 2; grid-row: 1;" title="{{current_song.song.item.name if not noSong else ''}}">{{current_song.song.item.name if not noSong else ''}}</h2>
+                </div>
+                <!-- Artists -->
+                <div id="current_artists" style="grid-column: 2; grid-row: 2; display: inline">
+                    {% if not noSong and current_song.song.item.artists %}
+                        {% for artist in current_song.song.item.artists %}
+                            {% if artist.href %}
+                                <a href="{{artist.href}}" title="{{artist.name}}" style="font-size: 1.4em;" class="white">{{artist.name}}</a>
+                            {% else %}
+                                <span style="font-size: 1.4em" title="{{artist.name}}">{{artist.name}}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Album -->
+                <div id="current_album">
+                    {% if not noSong and current_song.song.item.album %}
+                        {% if current_song.song.item.album.href is not none %}
+                            <a href="{{current_song.song.item.album.href}}" title="{{current_song.song.item.album.name}}" style="font-size: 1.1em;" class="white">{{current_song.song.item.album.name}}</a>
+                        {% else %}
+                            <span style="font-size: 1.1em" title="{{current_song.song.item.album.name}}">{{current_song.song.item.album.name}}</span>
+                        {% endif %}
+                    {% else %}
+                        <span style="color: gray">album unknown</span>
+                    {% endif %}
+                </div>
+
+
+                <!-- Scrubbing -->
+                <div style="display: relative">
+                    <div class="progress_bar"></div>
+                    <span class="progress_ball"></span>
+                    <span id="timeElapsed" style="float: left;">0:00</span>
+                    <span id="timeRemaining" style="float: right;">3:25</span>
+                </div>
+            </span>
+        </div>
+        <span id="main_played_at" class="color_text"></span>
+    </span>
+
+    <span id="nf_radio_inactive" class="{{ 'hidden' if not noSong }}">
+        <div id="radio_offline" class="color_text">
+            <h1 class="color_text">Radio NF is currently offline</h1>
+            <h4 class="color_text" style="margin: 0 auto;">Come back later for some true bangers.</h4>
+
+            <p>In the meantime, check out what sick beats were played recently:</p>
+        </div>
+    </span>
+
+    <div id="history_area" class="color_text">
+        <h3>History</h3>
+        <div id="history_items">
+
+        </div>
+    </div>
+
+    <div id="preview_area" class="preview_area color_text hidden">
+        <span class="preview_meta">
+            <a id="preview_link" style="margin-right: 10px" href="/">
+                <img id="preview_source_image" src="/static/Spotify_Icon_RGB_Green.png" height="15" width="15">
+            </a>
+            <button title="close preview" class="preview_button_close" onclick="closePreview()">
+                x
+            </button>
+        </span>
+        <span style="display: flex;">
+            <img id="preview_image" src="https://i.scdn.co/image/ab67616d0000b27366b16bf3c493373edc9f8dc9" height="50" width="50"/>
+            <span style="margin: 0 auto; display: flex; flex-direction: column; text-align: center;">
+                <span id="preview_title" style="font-size: 1.2em">sample title</span>
+                <span id="preview_artist">sample artist</span>
+            </span>
+        </span>
+        <div>
+            <audio
+                id="preview_audio"
+                on
+                autoplay
+                style="width: 100%;"
+                controls
+                src="">
+            </audio>
+        </div>
+    </div>
+</main>
+
+    <script>
+        const preview_audio = document.getElementById("preview_audio");
+        /** how often to get new seconds after song ends */
+        const fetch_new_song_after_end_secs = 2;
+        /** how often to check for currently playing */
+        const fetch_new_song_secs = 10;
+        /** how often to move the ball */
+        const ball_timer_in_secs = 1;
+        /** pointer for ball timer */
+        let setBallTimer = 0;
+        /** pointer for current song timer */
+        let mainFetchTmier = 0;
+
+        /** nf todo - ideally not hardcoded - length of Main Song in px so we can know when to auto-scroll text */
+        let maxWidthOfSong = 500;
+
+        /** Current song object */
+        let currentSong = null;
+
+        let is_playing = false;
+
+        /** handle to the scrub ball */
+        const ball = document.getElementsByClassName("progress_ball")[0];
+
+        /** shift the ball up so it starts aligned with the scrubbar */
+        ball.style.transform = "translateY(-6px)" 
+
+        /** history of song objects that have been played. Keeps up to 50 */
+        let history = [];
+
+
+        /** region: server-side rendered objects */
+        {% if current_song and current_song.song.item %}
+        let duration_ms = {{current_song.song.item.duration_ms}};
+        let progress_ms = {{current_song.song.progress_ms}};
+        let main_played_at_ts = new Date({{current_song.song.timestamp}});
+        document.title = "{{current_song.song.item.name}} | Radio NF";
+        {% else %}
+        let duration_ms = 0;
+        let progress_ms = 0;
+        let main_played_at_ts = 0;
+        document.title = "Radio NF"
+        {% endif %}
+        /** endregion: server-side rendered objects */
+        
+        
+        /** Sets the title of the document, based on whether a song is playing or not */
+        function setTitle() {
+            if (duration_ms === 0) {
+                document.title = "Radio NF"
+            }
+            else {
+                document.title = `${currentSong.song.item.name} | Radio NF`
+            }
+        }
+
+        function setTextScrollIfOverflow() {
+            if (duration_ms !== 0) {
+                const titleEl = document.getElementById("main_song_title");
+                if (titleEl.scrollWidth >= maxWidthOfSong) {
+                    titleEl.classList.add("scroll_text");
+                }
+                else {
+                    titleEl.classList.remove("scroll_text");
+                }
+            }
+        }
+
+
+        /** Pretty prints the ms in song format
+         * 0 -> 0:00
+         * 60 -> 1:00
+         * 125 -> 2:05
+         * 614 -> 10:14
+         */
+        function format_ms(ms) {
+            var sec_num = Math.ceil(ms / 1000);
+            var days    = Math.floor(sec_num / 86400);
+            var hours   = Math.floor(sec_num / 3600);
+            var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+            var seconds = sec_num - (hours * 3600) - (minutes * 60);
+
+            const secStr = seconds <= 9 ? `0${seconds}` : ""+seconds;
+            
+            if (days>0)
+            {
+                hours=hours-(24 * days);
+                return `${days}:${hours}:${minutes}:${secStr}`;
+            } else if (hours>0) {
+                return `${hours}:${minutes}:${secStr}`;
+            } else if (minutes>0 || seconds>0) {
+                return `${minutes}:${secStr}`;
+            } else {
+                return "0:00";
+            }
+        }
+        
+
+        /** Sets the ball at the appropiate point on the scrubbar based on the progress and duration */
+        function setBall(duration, progress) {
+            /* get width of Bar */
+            let progress_a = format_ms(progress_ms);
+            let remaining_a = format_ms(duration - progress_ms);
+
+            const bar = document.getElementsByClassName("progress_bar")[0];
+            const bbox = bar.getBoundingClientRect();
+            const wpx = bbox.width;
+            if (duration !== 0 && progress >= duration) {
+                ball.style.transform = `translate(${wpx}px, -6px)`;
+                progress_a = format_ms(duration);
+                remaining_a = "0:00";
+
+                /* this timer has outlived its song. Stop it */
+                if (setBallTimer) {
+                    console.log("clearing out the interval timer");
+                    ballTimer(false)
+                    console.log("setting timer for fetching next song... (3 seconds)");
+                    setTimeout(() => fetchCurrentlyPlaying(), fetch_new_song_after_end_secs * 1000);
+                }
+            }
+            else {
+                const percent = progress_ms / duration;
+                const move_x_px = wpx * percent;
+                ball.style.transform = `translate(${move_x_px}px, -6px)`;
+            }
+            document.getElementById("timeElapsed").innerText = progress_a;
+            document.getElementById("timeRemaining").innerText = remaining_a;
+        }
+
+        /** API call to server to get current status of the Radio */
+        async function fetchCurrentlyPlaying() {
+            console.log("Fetching currently playing song");
+            try {
+                const response = await fetch("api/currently_playing");
+                const json = await response.json();
+                update_main_song(json)
+            } catch (error) {
+                console.error("failed to get currently playing:");
+                console.error(error);
+            }
+        }
+
+        /** Whether to start or stop the ball timer */
+        function ballTimer(on) {
+            clearInterval(setBallTimer); /* just in case old references exist */
+            if (on) {
+                setBall(duration_ms, progress_ms); /* initial forced position update */
+                setBallTimer = setInterval(() => {
+                    setBall(duration_ms, progress_ms);
+                    progress_ms += 1 * 1000; /* advance 1 second every second */
+                }, 1 * 1000);
+            }
+        }
+
+        function update_main_song(obj) {
+            if (obj.current_song && obj.current_song.song) {
+                console.log("got " + obj.current_song.song.item.name);
+                document.getElementById("nf_radio_active").classList.remove("hidden");
+                document.getElementById("nf_radio_inactive").classList.add("hidden");
+                currentSong = obj.current_song;
+                /** Timer refresh */
+                duration_ms = currentSong.song.item.duration_ms;
+                progress_ms = currentSong.song.progress_ms;
+                main_played_at_ts = new Date(currentSong.song.timestamp);
+                is_playing = currentSong.song.is_playing;
+                if (!is_playing) {
+                    console.log("User is playing song, but the song is paused");
+                }
+                document.getElementById("main_played_at").innerText=main_played_at_ts.toLocaleString();
+                /* move the ball every second */
+                ballTimer(is_playing);
+
+                /** Image refresh */
+                main_song_image.src=currentSong.song.item.main_image;
+
+                /** add the appropriate click-source banner */
+                main_song_source_link.href = currentSong.song.item.main_link;
+                if(currentSong.kind === "spotify") {
+                    main_song_source_icon.src = "/static/Spotify_Icon_RGB_Green.png";
+                    main_song_source_icon.width = "15";
+                }
+                else if (currentSong.kind === "youtube") {
+                    main_song_source_icon.src = "/static/yt_logo_rgb_dark.png";
+                    main_song_source_icon.width = "60";
+                }
+                else {
+                    /** ?? */
+                }
+
+                /** Title refresh */
+                main_song_title.innerText = currentSong.song.item.name;
+                setTextScrollIfOverflow();
+                setTitle();
+
+                /** artist refresh */
+                const current_artists = document.getElementById("current_artists");
+                current_artists.innerHTML = ""; /* nuke the old inner elements */
+                const artists = currentSong.song.item.artists;
+                if (artists && artists.length > 0) {
+                    artists.forEach((x) => {
+                        if (currentSong.kind === "spotify") {
+                            const sp = document.createElement("span");
+                            let innerEl = null;
+                            if (x.href) {
+                                innerEl = document.createElement("a");
+                                innerEl.href = x.href;
+                            }
+                            else {
+                                innerEl = document.createElement("span");
+                            }
+                            innerEl.title = x.name;
+                            innerEl.className = "artistLabel";
+                            innerEl.innerText = x.name;
+
+                            sp.appendChild(innerEl);
+
+                            current_artists.appendChild(sp);
+                        }
+                        else if (currentSong.kind === "youtube") {
+                            /** nf todo ?? */
+                        }
+                        else {
+                            /** ?? */
+                        }
+                    });
+                } else {
+                    current_artists.innerText = "<no artists>";
+                }
+
+                /** album refresh */
+                const current_album = document.getElementById("current_album");
+                current_album.innerHTML = "";
+                const album = currentSong.song.item.album;
+                if (album) {
+                    current_album.title = album.name;
+                    let innerEl = null;
+                    if (album.href) {
+                        innerEl = document.createElement("a");
+                        innerEl.href = album.href;
+                    } else {
+                        innerEl = document.createElement("span");
+                    }
+                    innerEl.className = "albumLabel";
+                    innerEl.innerText = album.name;
+                    current_album.appendChild(innerEl);
+                }
+                else {
+                    current_album.title = "<no album>";
+                    current_album.innerText = "<no album>";
+                }
+            }
+            else {
+                console.log("Didn't get any currently playing songs");
+                show_nothing_playing();
+            }
+        }
+
+        function show_nothing_playing() {
+            ballTimer(false);
+            document.getElementById("nf_radio_active").classList.add("hidden");
+            document.getElementById("nf_radio_inactive").classList.remove("hidden");
+            console.log("Set to Nothing Playing");
+        }
+
+        async function fetchHistoryRecentHistory() {
+            console.log("Fetching recent history objects");
+            try {
+                const response = await fetch("api/get_history");
+                const json = await response.json();
+                createHistoryObjects(json)
+            } catch (error) {
+                console.error("failed to get history:");
+                console.error(error);
+            }
+        }
+
+        function createHistoryObjects(jarr) {
+            const historyItems = document.getElementById("history_items");
+            let fappend = (node) => { historyItems.prepend(node)};
+            if (history.length === 0) {
+                fappend = (node) => { historyItems.appendChild(node)};
+            }
+            jarr.forEach((h) => {
+                const oldItem = history.find(x => x.timestamp === h.timestamp);
+                
+                /* check that the current old list contains this item */
+                if (oldItem === undefined) { /* didn't exist, we add */
+                    history.unshift(h); /* add to our identity array */
+
+                    const ts = new Date(h.timestamp * 1000).toLocaleString();
+                    const histItemDiv = document.createElement("div");
+                    histItemDiv.id = `history_${h.timestamp}`;
+                    histItemDiv.title = `${h.song.item.name}, played at ${ts}`;
+                    histItemDiv.classList.add("history_item");
+
+                    const histItemMeta = document.createElement("div");
+                    histItemMeta.classList.add("history_meta");
+
+                    
+                    const histItemPreviewSpan = document.createElement("span");
+                    histItemPreviewSpan.classList.add("history_song_source_icon");
+                    
+                    if (h.song.kind === "spotify" && h.song.item.preview_url) {
+                        const histItemPreviewButton = document.createElement("button");
+                        histItemPreviewButton.classList.add("history_preview_button");
+                        histItemPreviewButton.innerText = "preview";
+                        histItemPreviewButton.onclick = () => {openPreview(h)};
+                        histItemPreviewSpan.appendChild(histItemPreviewButton);
+                    }
+
+                    const histItemTimestamp = document.createElement("span");
+                    histItemTimestamp.classList.add("history_timestamp");
+                    histItemTimestamp.innerText = ts;
+                    histItemMeta.appendChild(histItemTimestamp); 
+
+
+
+
+                    if (h.song.item.main_link) {
+                        const histItemLink = document.createElement("a");
+                        histItemLink.title = `Open link in ${h.song.kind}`;
+                        histItemLink.href = h.song.item.main_link;
+
+                        histItemPreviewSpan.appendChild(histItemLink);
+                        
+                        const histItemImg = document.createElement("img");
+                        histItemImg.classList.add("history_song_source_icon");
+                        histItemImg.src = h.song.kind === "spotify" ? "/static/Spotify_Icon_RGB_Green.png" : "/static/yt_logo_rgb_dark.png";
+                        histItemImg.height = h.song.kind === "youtube" ? "10" : "15";
+                        histItemImg.width = h.song.kind === "youtube" ? "45" : "15";
+                        histItemLink.appendChild(histItemImg);
+                    }
+
+                    histItemMeta.appendChild(histItemPreviewSpan);
+
+
+
+                    histItemDiv.appendChild(histItemMeta);
+
+                    const histItemData = document.createElement("div");
+                    histItemData.classList.add("history_data");
+                    
+                    const histItemDataImg = document.createElement("img");
+                    histItemDataImg.src = h.song.item.main_image;
+                    histItemDataImg.height = "35";
+                    histItemDataImg.width = histItemDataImg.height;
+                    histItemData.appendChild(histItemDataImg);
+
+                    const histItemSongInfoDiv = document.createElement("div");
+                    histItemSongInfoDiv.classList.add("history_song_info");
+                    const songNameDiv = document.createElement("div");
+                    songNameDiv.classList.add("history_song_name");
+                    songNameDiv.innerText = h.song.item.name;
+                    histItemSongInfoDiv.appendChild(songNameDiv);
+
+                    const artistNamesDiv = document.createElement("div");
+                    artistNamesDiv.classList.add("history_song_artist");
+                    if (h.song.item.artists == null || h.song.item.artists.length === 0) {
+                        artistNamesDiv.innerText = "<unknown artist>";
+                    }
+                    else {
+                        artistNamesDiv.innerText = h.song.item.artists.map(x => x.name).join(", ");
+                    }
+                    histItemSongInfoDiv.appendChild(artistNamesDiv);
+                    histItemData.appendChild(histItemSongInfoDiv);
+                    histItemDiv.appendChild(histItemData);
+
+
+                    fappend(histItemDiv);
+                }
+            });
+        }
+
+
+        preview_audio.onloadeddata = (event) => {
+            console.log(preview_audio);
+            preview_audio.onloadeddata = null;
+            preview_audio.onloadeddata = () => {
+                preview_audio.play();
+            }
+        };
+        function openPreview(songObject) {
+            console.log("opening preview window");
+            document.getElementById("preview_area").classList.remove("hidden");
+            if (songObject && songObject.song.item.preview_url) {
+                preview_audio.src = songObject.song.item.preview_url;
+
+                document.getElementById("preview_link").href = songObject.song.item.main_link;
+
+                document.getElementById("preview_image").src = songObject.song.item.main_image;
+
+                document.getElementById("preview_title").innerHTML = songObject.song.item.name;
+
+                let astr = "<unknown artist>";
+                if (songObject.song.item.artists && songObject.song.item.artists.length > 0) {
+                    astr = songObject.song.item.artists.map(x => x.name).join(", ");
+                }
+                document.getElementById("preview_artist").innerHTML = astr;
+
+            }
+        }
+
+        function playaudio() {
+            console.log('audio loaded!');
+            document.getElementById("preview_audio").play();
+        }
+
+        function closePreview(e) {
+            console.log("closed preview");
+            preview_audio.pause();
+            document.getElementById("preview_area").classList.add("hidden");
+        }
+
+        function main() {
+            fetchHistoryRecentHistory();
+            if (duration_ms > 0) {
+                setTextScrollIfOverflow();
+                document.getElementById("main_played_at").innerText=main_played_at_ts.toLocaleString();
+                ballTimer(true);
+            }
+            else {
+                show_nothing_playing();
+            }
+            setInterval(() => {
+                fetchCurrentlyPlaying();
+                fetchHistoryRecentHistory();
+            }, fetch_new_song_secs * 1000);
+        }
+
+    main();
+
+    </script>
+    
+{% endblock %}
+
