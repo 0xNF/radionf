@@ -12,7 +12,7 @@
 
             <!-- Icon for which service song is from -->
             <span class="via" class="{{ 'hidden' if (noSong or cursong.item.main_link is none) }}">
-                <button id="main_song_preview" class="play_preview_button" onclick="openPreview(currentSong)">
+                <button id="main_song_preview {{ hidden if cursong.item.preview_url is none }}" class="play_preview_button" onclick="openPreview(currentSong)">
                     preview
                 </button>
                 <a id="main_song_source_link" href="{{ current_song.song.item.main_link if not noSong }}">
@@ -408,7 +408,7 @@
 
         function createHistoryObjects(jarr) {
             const historyItems = document.getElementById("history_items");
-            
+
             /* should we append to the end, or to the front? */
             let fappend = (node) => { historyItems.prepend(node)};
             if (history.length === 0) {
@@ -416,11 +416,11 @@
             }
 
             const eliminate = []
-            history.forEach(x => {
-                const old = jarr.find(h=> h.timestamp === x.timestamp);
+            history.forEach((h) => {
+                const old = jarr.find(x => x.timestamp === h.timestamp);
                 if (old === undefined) {
                     /* this item, which was in our old list, is no longer in our new list. Delete it from the html view */
-                    eliminate.push(old);
+                    eliminate.push(h);
                 }
             });
 
