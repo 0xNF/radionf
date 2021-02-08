@@ -25,6 +25,7 @@ def load_token():
 
     # Token has never been loaded (because last known is dt.min), so load it from the file
     if last_known_expires_at <= datetime.datetime.min:
+        print("Token has never been loaded. Loading cache from file")
         j = load_token_file()
         last_known_expires_at = datetime.datetime.fromtimestamp(j["expires_at"])
 
@@ -48,7 +49,7 @@ def load_token():
 
     last_known_refresh_token = refresh
     last_known_expires_at = datetime.datetime.fromtimestamp(j["expires_at"])
-    
+
     return
 
 def load_token_file():

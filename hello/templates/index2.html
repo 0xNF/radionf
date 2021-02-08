@@ -17,12 +17,12 @@
                 </button>
                 <a id="main_song_source_link" href="{{ current_song.song.item.main_link if not noSong }}">
                     <img id="main_song_source_icon" 
-                        {% if cursong and cursong.item.href is not none and cursong.kind == 'spotify'  %}
+                        {% if cursong and cursong.item.main_link is not none and current_song.kind == 'spotify'  %}
                         height="15"width="15" src="/static/Spotify_Icon_RGB_Green.png" 
-                        {% elif cursong and cursong.item.main_link is not none and cursong.kind == 'youtube' %}
+                        {% elif cursong and cursong.item.main_link is not none and current_song.kind == 'youtube' %}
                         height="15"width="60" src="/static/yt_logo_rgb_dark.png"
                         {% else %}
-                        height="0" width="0" src=""
+                        height="0" width="15" src=""
                         {% endif %}
                     />
                 </a>
@@ -557,7 +557,7 @@
             setInterval(() => {
                 fetchCurrentlyPlaying();
                 fetchHistoryRecentHistory();
-                if (failureCount >= MAX_FAILURE_COUNT) {
+                if (failure_count >= MAX_FAILURE_COUNT) {
                     show_nothing_playing();
                 }
             }, fetch_new_song_secs * 1000);
