@@ -12,7 +12,7 @@
 
             <!-- Icon for which service song is from -->
             <span class="via" class="{{ 'hidden' if (noSong or cursong.item.main_link is none) }}">
-                <button id="main_song_preview {{ hidden if cursong.item.preview_url is none }}" class="play_preview_button" onclick="openPreview(currentSong)">
+                <button id="main_song_preview {{ hidden if noSong or cursong.item.preview_url is none }}" class="play_preview_button" onclick="openPreview(currentSong)">
                     preview
                 </button>
                 <a id="main_song_source_link" href="{{ current_song.song.item.main_link if not noSong }}">
@@ -287,9 +287,16 @@
         function update_main_song(obj) {
             if (obj.current_song && obj.current_song.song) {
                 console.log("got " + obj.current_song.song.item.name);
+                currentSong = obj.current_song;
+
                 document.getElementById("nf_radio_active").classList.remove("hidden");
                 document.getElementById("nf_radio_inactive").classList.add("hidden");
-                currentSong = obj.current_song;
+                if (currentSong.item.preview_url === null) {
+                    document.getElementById("main_song_preview").classList.add("hidden");
+                }
+                else {
+                    document.getElementById("main_song_preview").classList.remove("hidden");
+                }
                 /** Timer refresh */
                 duration_ms = currentSong.song.item.duration_ms;
                 progress_ms = currentSong.song.progress_ms;
