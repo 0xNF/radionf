@@ -7,20 +7,24 @@
 
 <main style="color: black;" id="radio_area">
     <span id="nf_radio_active" class=" {{ 'hidden' if noSong }}">
-        <h1 class="color_text">Currently Listening to: </h1>
+        <h1 class="color_text">Currently Listening To: </h1>
         <div class="main_song color_text" style="display: flex;">
 
             <!-- Icon for which service song is from -->
-            <span class="via" class="{{'hidden' if noSong or cursong.item.main_link is not none }}">
+            <span class="via" class="{{ 'hidden' if (noSong or cursong.item.main_link is none) }}">
                 <button id="main_song_preview" class="play_preview_button" onclick="openPreview(currentSong)">
                     preview
                 </button>
                 <a id="main_song_source_link" href="{{ current_song.song.item.main_link if not noSong }}">
-                    {% if current_song and current_song.song.item.href is not none %}
-                        <img id="main_song_source_icon" src="/static/Spotify_Icon_RGB_Green.png" height="15" width="15"/>
-                    {% else %}
-                        <img id="main_song_source_icon" src="/static/yt_logo_rgb_dark.png" height="15" width="60"/>
-                    {% endif %}
+                    <img id="main_song_source_icon" 
+                        {% if cursong and cursong.item.href is not none and cursong.kind == 'spotify'  %}
+                        height="15"width="15" src="/static/Spotify_Icon_RGB_Green.png" 
+                        {% elif cursong and cursong.item.main_link is not none and cursong.kind == 'youtube' %}
+                        height="15"width="60" src="/static/yt_logo_rgb_dark.png"
+                        {% else %}
+                        height="0" width="0" src=""
+                        {% endif %}
+                    />
                 </a>
             </span>
 
@@ -119,6 +123,7 @@
 </main>
 
     <script>
+        /** Handle to the Audio Preview bar */
         const preview_audio = document.getElementById("preview_audio");
         /** how often to get new seconds after song ends */
         const fetch_new_song_after_end_secs = 2;
@@ -130,6 +135,11 @@
         let setBallTimer = 0;
         /** pointer for current song timer */
         let mainFetchTmier = 0;
+
+        /* Max number of times request to server can fail before saying that Radio NF is offline */
+        const MAX_FAILURE_COUNT = 10;
+        /** Current failure count. Reset upon a successful HTTP response */
+        let failure_count = 0;
 
         /** nf todo - ideally not hardcoded - length of Main Song in px so we can know when to auto-scroll text */
         let maxWidthOfSong = 500;
@@ -254,7 +264,9 @@
                 const response = await fetch("api/currently_playing");
                 const json = await response.json();
                 update_main_song(json)
+                failure_count = 0;
             } catch (error) {
+                failure_count += 1;
                 console.error("failed to get currently playing:");
                 console.error(error);
             }
@@ -541,9 +553,13 @@
             else {
                 show_nothing_playing();
             }
+
             setInterval(() => {
                 fetchCurrentlyPlaying();
                 fetchHistoryRecentHistory();
+                if (failureCount >= MAX_FAILURE_COUNT) {
+                    show_nothing_playing();
+                }
             }, fetch_new_song_secs * 1000);
         }
 
