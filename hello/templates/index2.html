@@ -408,10 +408,29 @@
 
         function createHistoryObjects(jarr) {
             const historyItems = document.getElementById("history_items");
+            
+            /* should we append to the end, or to the front? */
             let fappend = (node) => { historyItems.prepend(node)};
             if (history.length === 0) {
                 fappend = (node) => { historyItems.appendChild(node)};
             }
+
+            const eliminate = []
+            history.forEach(x => {
+                const old = jarr.find(h=> h.timestamp === x.timestamp);
+                if (old === undefined) {
+                    /* this item, which was in our old list, is no longer in our new list. Delete it from the html view */
+                    eliminate.push(old);
+                }
+            });
+
+            /* get rid of any old history items that are no longer represented in our current history object */
+            eliminate.forEach(x => {
+                history.splice(history.indexOf(x), -1);
+                const oldDiv = document.getElementById(`history_${x.timestamp}`);
+                oldDiv.remove();
+            });
+
             jarr.forEach((h) => {
                 const oldItem = history.find(x => x.timestamp === h.timestamp);
                 
