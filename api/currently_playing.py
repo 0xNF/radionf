@@ -32,8 +32,9 @@ def check_add_history(song, timestamp, duration_ms):
             if (h.Timestamp + td) >= datetime.now():
                 print(f"Not adding {song.Id} to history because it didn't pass the history time-check")
                 return
-        h = hello.models.History.objects.create(Timestamp=timestamp, Song=song)
-        h.save()
+    h = hello.models.History.objects.create(Timestamp=timestamp, Song=song)
+    h.save()
+    print(f"Inserted into history at timestamp {timestamp}")
     return
 
 
