@@ -11,7 +11,7 @@
         <div class="main_song color_text" style="display: flex;">
 
             <!-- Icon for which service song is from -->
-            <span class="via" class="{{ 'hidden' if (noSong or cursong.item.main_link is none) }}">
+            <span class="via" class="{{ hidden if (noSong or cursong.item.main_link is none) }}">
                 <button id="main_song_preview" class="play_preview_button {{ hidden if noSong or cursong.item.preview_url is none }}" onclick="openPreview(currentSong)">
                     preview
                 </button>
@@ -427,6 +427,7 @@
                 const old = jarr.find(x => x.timestamp === h.timestamp);
                 if (old === undefined) {
                     /* this item, which was in our old list, is no longer in our new list. Delete it from the html view */
+                    console.log(h);
                     eliminate.push(h);
                 }
             });
@@ -435,7 +436,9 @@
             eliminate.forEach((x) => {
                 history.splice(history.indexOf(x), -1);
                 const oldDiv = document.getElementById(`history_${x.timestamp}`);
-                oldDiv.remove();
+                if (oldDiv) {
+                    oldDiv.remove();
+                }
             });
 
             jarr.forEach((h) => {
